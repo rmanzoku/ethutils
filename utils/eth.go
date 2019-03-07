@@ -7,6 +7,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -31,7 +33,33 @@ func NewTransactor(keystore, passphrase string) (*bind.TransactOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewTransactor(bytes.NewReader(key), passphrase)
+	tx, err := bind.NewTransactor(bytes.NewReader(key), passphrase)
+	if err != nil {
+		return nil, err
+	}
+	tx.Context = context.TODO()
+	return tx, nil
+}
+
+func SendEther(client *ethclient.Client, transactOpts *bind.TransactOpts, to common.Address, amount *big.Int) (*types.Transaction, error) {
+	ctx := transactOpts.Context
+	nonce, err := client.NonceAt(ctx, transactOpts.From, nil)
+	if err != nil {
+		return nil, err
+	}
+	tx := types.NewTransaction(nonce, to, amount, 21000, transactOpts.GasPrice, nil)
+
+	chainID, err := client.NetworkID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err = transactOpts.Signer(types.NewEIP155Signer(chainID), transactOpts.From, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, client.SendTransaction(transactOpts.Context, tx)
 }
 
 func ToEther(wei *big.Int) *big.Float {
