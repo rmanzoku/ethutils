@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"math"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -13,6 +15,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 )
+
+var AverageBlockGenerationTime = int64(15)
 
 func NewEthClient(rpc string) (*ethclient.Client, error) {
 	conn, err := ethclient.Dial(rpc)
@@ -60,6 +64,52 @@ func SendEther(client *ethclient.Client, transactOpts *bind.TransactOpts, to com
 	}
 
 	return tx, client.SendTransaction(transactOpts.Context, tx)
+}
+
+func BlockByTime(client *ethclient.Client, t time.Time) (*types.Block, error) {
+	ctx := context.TODO()
+	result := new(types.Block)
+
+	latest, err := client.BlockByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	latestTime := time.Unix(latest.Time().Int64(), 0)
+
+	diffTime := latestTime.Unix() - t.Unix()
+	if diffTime < 0 {
+		return nil, errors.New("Block is not generated yet")
+	}
+
+	diffBlockNum := big.NewInt(diffTime / AverageBlockGenerationTime)
+	targetBlockNum := new(big.Int).Sub(latest.Number(), diffBlockNum)
+	for {
+
+		targetBlock, err := client.BlockByNumber(ctx, targetBlockNum)
+		if err != nil {
+			return nil, err
+		}
+
+		diffTime = targetBlock.Time().Int64() - t.Unix()
+		if int64(math.Abs(float64(diffTime))) < AverageBlockGenerationTime {
+			if diffTime > 0 {
+				result, err = client.BlockByNumber(ctx, new(big.Int).Add(targetBlockNum, big.NewInt(1)))
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				result = targetBlock
+			}
+
+			break
+		}
+
+		diffBlockNum = big.NewInt(diffTime / AverageBlockGenerationTime)
+		targetBlockNum = new(big.Int).Sub(targetBlock.Number(), diffBlockNum)
+	}
+
+	return result, nil
 }
 
 func ToEther(wei *big.Int) *big.Float {
