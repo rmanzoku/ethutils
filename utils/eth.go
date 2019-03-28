@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"time"
 
@@ -14,9 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
 var AverageBlockGenerationTime = int64(15)
+var TrialCount = 10
 
 func NewEthClient(rpc string) (*ethclient.Client, error) {
 	conn, err := ethclient.Dial(rpc)
@@ -84,32 +85,49 @@ func BlockByTime(client *ethclient.Client, t time.Time) (*types.Block, error) {
 
 	diffBlockNum := big.NewInt(diffTime / AverageBlockGenerationTime)
 	targetBlockNum := new(big.Int).Sub(latest.Number(), diffBlockNum)
+	cnt := 0
 	for {
+		if cnt > TrialCount {
+			return nil, errors.New("Trial count exceeded")
+		}
 
-		targetBlock, err := client.BlockByNumber(ctx, targetBlockNum)
-		if err != nil {
+		eg := errgroup.Group{}
+		var targetBlock *types.Block
+		eg.Go(func() error {
+			targetBlock, err = client.BlockByNumber(ctx, targetBlockNum)
+			return err
+		})
+		var targetBlockBeforeOne *types.Block
+		eg.Go(func() error {
+			targetBlockBeforeOne, err = client.BlockByNumber(ctx, new(big.Int).Sub(targetBlockNum, big.NewInt(1)))
+			return err
+		})
+
+		if err := eg.Wait(); err != nil {
 			return nil, err
 		}
 
-		diffTime = targetBlock.Time().Int64() - t.Unix()
-		if int64(math.Abs(float64(diffTime))) < AverageBlockGenerationTime {
-			if diffTime > 0 {
-				result, err = client.BlockByNumber(ctx, new(big.Int).Add(targetBlockNum, big.NewInt(1)))
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				result = targetBlock
-			}
-
+		if targetBlockBeforeOne.Time().Int64() < t.Unix() && targetBlock.Time().Int64() >= t.Unix() {
+			result = targetBlock
 			break
 		}
 
-		diffBlockNum = big.NewInt(diffTime / AverageBlockGenerationTime)
+		diffTime = targetBlock.Time().Int64() - t.Unix()
+
+		// fmt.Println(targetBlockNum, diffTime)
+		diffBlockNum = big.NewInt(diffTime/AverageBlockGenerationTime/2 + 1)
 		targetBlockNum = new(big.Int).Sub(targetBlock.Number(), diffBlockNum)
+		cnt++
 	}
 
 	return result, nil
+}
+
+func abs(a int64) int64 {
+	if a < 0 {
+		return -1 * a
+	}
+	return a
 }
 
 func ToEther(wei *big.Int) *big.Float {

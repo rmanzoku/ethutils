@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/rmanzoku/ethutils/utils"
@@ -11,7 +12,7 @@ import (
 
 var (
 	rpc = os.Getenv("RPC")
-	t   = time.Unix(1553307665, 0)
+	t   = time.Now()
 )
 
 func run() (err error) {
@@ -31,6 +32,11 @@ func run() (err error) {
 
 func main() {
 	flag.Parse()
+	tInt, err := strconv.ParseInt(flag.Arg(0), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	t = time.Unix(tInt, 0)
 	if err := run(); err != nil {
 		panic(err)
 	}
