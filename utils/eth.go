@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -33,7 +34,7 @@ func NewEthClient(rpc string) (*ethclient.Client, error) {
 	return conn, nil
 }
 
-func NewTransactor(keystore, passphrase string) (*bind.TransactOpts, error) {
+func NewTransactorFromKeystore(keystore, passphrase string) (*bind.TransactOpts, error) {
 	key, err := ioutil.ReadFile(keystore)
 	if err != nil {
 		return nil, err
@@ -42,6 +43,16 @@ func NewTransactor(keystore, passphrase string) (*bind.TransactOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	tx.Context = context.TODO()
+	return tx, nil
+}
+
+func NewTransactorFromECDSA(filePath string) (*bind.TransactOpts, error) {
+	key, err := crypto.LoadECDSA(filePath)
+	if err != nil {
+		return nil, err
+	}
+	tx := bind.NewKeyedTransactor(key)
 	tx.Context = context.TODO()
 	return tx, nil
 }
