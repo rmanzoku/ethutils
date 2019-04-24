@@ -33,6 +33,10 @@ func Example() {
 func Recover(message []byte, sig []byte) (common.Address, error) {
 	nilAddress := common.HexToAddress("0x0")
 
+	if len(sig) < 63 {
+		return nilAddress, errors.New("invalid sig")
+	}
+
 	if sig[64] != 27 && sig[64] != 28 {
 		return nilAddress, errors.New("recovery error")
 	}
@@ -47,9 +51,10 @@ func Recover(message []byte, sig []byte) (common.Address, error) {
 }
 
 func ToEthSignedMessageHash(hash []byte) ([]byte, error) {
-	if len(hash) != 32 {
-		return nil, errors.New("hash len is not 32")
-	}
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(hash), hash)
-	return crypto.Keccak256([]byte(msg)), nil
+	return Keccak256([]byte(msg)), nil
+}
+
+func Keccak256(data []byte) []byte {
+	return crypto.Keccak256(data)
 }
