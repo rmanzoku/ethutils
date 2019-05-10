@@ -141,6 +141,14 @@ func abs(a int64) int64 {
 	return a
 }
 
+func IsContractAddress(client *ethclient.Client, address common.Address) (bool, error) {
+	b, err := client.CodeAt(context.TODO(), address, nil)
+	if err != nil {
+		return false, err
+	}
+	return (len(b) > 0), nil
+}
+
 func ToEther(wei *big.Int) *big.Float {
 	ether, _ := new(big.Float).SetString("1000000000000000000")
 
