@@ -18,10 +18,7 @@ func Example() {
 		return
 	}
 
-	hash, err := ToEthSignedMessageHash(message)
-	if err != nil {
-		return
-	}
+	hash := ToEthSignedMessageHash(message)
 
 	signer, err := Recover(hash, sig)
 	if err != nil {
@@ -34,12 +31,12 @@ func Recover(message []byte, sig []byte) (common.Address, error) {
 	nilAddress := common.HexToAddress("0x0")
 
 	if len(sig) < 63 {
-		return nilAddress, errors.New("invalid sig")
+		return nilAddress, errors.New("sig size is not under 63")
 	}
-
 	if sig[64] != 27 && sig[64] != 28 {
 		return nilAddress, errors.New("recovery error")
 	}
+
 	sig[64] -= 27
 
 	p, err := crypto.SigToPub(message, sig)
@@ -50,9 +47,10 @@ func Recover(message []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*p), nil
 }
 
-func ToEthSignedMessageHash(hash []byte) ([]byte, error) {
-	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(hash), hash)
-	return Keccak256([]byte(msg)), nil
+func ToEthSignedMessageHash(message []byte) []byte {
+	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)
+	fmt.Println(msg)
+	return Keccak256([]byte(msg))
 }
 
 func Keccak256(data []byte) []byte {
