@@ -19,6 +19,7 @@ import (
 
 var AverageBlockGenerationTime = int64(15)
 var TrialCount = 10
+var NilAddress = common.HexToAddress("0x0")
 
 func NewEthClient(rpc string) (*ethclient.Client, error) {
 	conn, err := ethclient.Dial(rpc)
@@ -57,6 +58,30 @@ func NewTransactorFromECDSA(filePath string) (*bind.TransactOpts, error) {
 	return tx, nil
 }
 
+func GetGasPrice(client *ethclient.Client, addon *big.Int, limit *big.Int) (*big.Int, error) {
+	ctx := context.TODO()
+	suggestGasPrice, err := client.SuggestGasPrice(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	i := &big.Int{}
+	gasPrice := i.Add(suggestGasPrice, addon)
+	if gasPrice.Cmp(limit) > 0 {
+		return nil, errors.Errorf("Gas price too expensive %s + %s < %s",
+			ToGWei(suggestGasPrice).Text('f', 0),
+			ToGWei(addon).Text('f', 0),
+			ToGWei(limit).Text('f', 0),
+		)
+	}
+
+	return gasPrice, nil
+}
+
+func CancelTx(client *ethclient.Client, transactOpts *bind.TransactOpts) (*types.Transaction, error) {
+	return SendEther(client, transactOpts, transactOpts.From, big.NewInt(0))
+}
+
 func SendEther(client *ethclient.Client, transactOpts *bind.TransactOpts, to common.Address, amount *big.Int) (*types.Transaction, error) {
 	ctx := transactOpts.Context
 	nonce, err := client.NonceAt(ctx, transactOpts.From, nil)
@@ -87,7 +112,7 @@ func BlockByTime(client *ethclient.Client, t time.Time) (*types.Block, error) {
 		return nil, err
 	}
 
-	latestTime := time.Unix(latest.Time().Int64(), 0)
+	latestTime := time.Unix(int64(latest.Time()), 0)
 
 	diffTime := latestTime.Unix() - t.Unix()
 	if diffTime < 0 {
@@ -118,12 +143,12 @@ func BlockByTime(client *ethclient.Client, t time.Time) (*types.Block, error) {
 			return nil, err
 		}
 
-		if targetBlockBeforeOne.Time().Int64() < t.Unix() && targetBlock.Time().Int64() >= t.Unix() {
+		if targetBlockBeforeOne.Time() < uint64(t.Unix()) && targetBlock.Time() >= uint64(t.Unix()) {
 			result = targetBlock
 			break
 		}
 
-		diffTime = targetBlock.Time().Int64() - t.Unix()
+		diffTime = int64(targetBlock.Time()) - t.Unix()
 
 		// fmt.Println(targetBlockNum, diffTime)
 		diffBlockNum = big.NewInt(diffTime/AverageBlockGenerationTime/2 + 1)
@@ -154,6 +179,26 @@ func ToEther(wei *big.Int) *big.Float {
 
 	w := new(big.Float).SetInt(wei)
 	return new(big.Float).Quo(w, ether)
+}
+
+func ToGWei(wei *big.Int) *big.Float {
+	ether, _ := new(big.Float).SetString("1000000000")
+
+	w := new(big.Float).SetInt(wei)
+	return new(big.Float).Quo(w, ether)
+}
+
+func GweiToWei(gwei int64) (*big.Int, error) {
+	gweiDecimal := decimal.New(gwei, 0)
+	baseWei, _ := decimal.NewFromString("1000000000")
+
+	retDecimal := gweiDecimal.Mul(baseWei)
+	ret, ok := new(big.Int).SetString(retDecimal.String(), 10)
+	if !ok {
+		return nil, errors.New("Invalit number")
+	}
+
+	return ret, nil
 }
 
 func ToWei(ether *big.Float) (*big.Int, error) {
