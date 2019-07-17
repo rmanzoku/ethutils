@@ -38,7 +38,7 @@ func run(ctx context.Context, args []string) (err error) {
 	if err != nil {
 		return
 	}
-	fmt.Println(ret.Nonce(), ret.Hash().String())
+	fmt.Println(ret.Nonce(), utils.ToGwei(ret.GasPrice()), ret.Hash().String())
 	return
 }
 

@@ -69,9 +69,9 @@ func GetGasPrice(client *ethclient.Client, addon *big.Int, limit *big.Int) (*big
 	gasPrice := i.Add(suggestGasPrice, addon)
 	if gasPrice.Cmp(limit) > 0 {
 		return nil, errors.Errorf("Gas price too expensive %s + %s < %s",
-			ToGWei(suggestGasPrice).Text('f', 0),
-			ToGWei(addon).Text('f', 0),
-			ToGWei(limit).Text('f', 0),
+			ToGwei(suggestGasPrice).Text('f', 0),
+			ToGwei(addon).Text('f', 0),
+			ToGwei(limit).Text('f', 0),
 		)
 	}
 
@@ -181,7 +181,7 @@ func ToEther(wei *big.Int) *big.Float {
 	return new(big.Float).Quo(w, ether)
 }
 
-func ToGWei(wei *big.Int) *big.Float {
+func ToGwei(wei *big.Int) *big.Float {
 	ether, _ := new(big.Float).SetString("1000000000")
 
 	w := new(big.Float).SetInt(wei)
