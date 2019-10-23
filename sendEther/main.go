@@ -25,11 +25,11 @@ func run() (err error) {
 		return
 	}
 
-	transactor, err := utils.NewTransactor(keystore, password)
+	transactor, err := utils.NewTransactorFromKeystore(keystore, password)
 	if err != nil {
 		return
 	}
-	transactor.GasPrice, _ = new(big.Int).SetString("10000000000", 10)
+	transactor.GasPrice, _ = new(big.Int).SetString("5000000000", 10)
 
 	fromBalance, err := cli.BalanceAt(context.TODO(), transactor.From, nil)
 	if err != nil {
@@ -48,9 +48,13 @@ func run() (err error) {
 		amount = new(big.Int).Sub(fromBalance, txFee)
 	}
 
+	// tx := new(types.Transaction)
 	tx, err := utils.SendEther(cli, transactor, toAddress, amount)
-	logFormat := "From:%s\tFromBalance:%v\tTo:%s\tToBalance:%v\tAmount:%v\tx:%s\n"
-	fmt.Printf(logFormat, transactor.From.String(), fromBalance.String(), toAddress.String(), toBalance.String(), utils.ToEther(amount).String(), tx.Hash().String())
+	if err != nil {
+		return
+	}
+	logFormat := "From:%s\tFromBalance:%v\tTo:%s\tToBalance:%v\tAmount:%v\ttx:%s\n"
+	fmt.Printf(logFormat, transactor.From.String(), utils.ToEther(fromBalance), toAddress.String(), utils.ToEther(toBalance), utils.ToEther(amount).String(), tx.Hash().String())
 	return
 }
 
