@@ -43,13 +43,17 @@ func run(args []string) (err error) {
 
 	fmt.Printf("target: %d, current: %d, left: %d\n", target, latest, diff)
 
+	time19 := time.Unix((diff*19)+now, 0)
+	time17 := time.Unix((diff*17)+now, 0)
 	time15 := time.Unix((diff*15)+now, 0)
 	time13 := time.Unix((diff*13)+now, 0)
-	time10 := time.Unix((diff*10)+now, 0)
+	time11 := time.Unix((diff*11)+now, 0)
 
+	fmt.Printf("time19: " + time19.Format(time.RFC1123Z) + "\n")
+	fmt.Printf("time17: " + time17.Format(time.RFC1123Z) + "\n")
 	fmt.Printf("time15: " + time15.Format(time.RFC1123Z) + "\n")
 	fmt.Printf("time13: " + time13.Format(time.RFC1123Z) + "\n")
-	fmt.Printf("time10: " + time10.Format(time.RFC1123Z) + "\n")
+	fmt.Printf("time11: " + time11.Format(time.RFC1123Z) + "\n")
 
 	return
 }
