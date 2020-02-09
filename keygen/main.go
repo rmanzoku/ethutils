@@ -13,6 +13,7 @@ func run() (err error) {
 		return
 	}
 
+	fmt.Println(string(crypto.FromECDSA(key)))
 	k := hex.EncodeToString(crypto.FromECDSA(key))
 	fmt.Print(k)
 	return

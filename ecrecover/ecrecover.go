@@ -49,7 +49,6 @@ func Recover(message []byte, sig []byte) (common.Address, error) {
 
 func ToEthSignedMessageHash(message []byte) []byte {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)
-	fmt.Println(msg)
 	return Keccak256([]byte(msg))
 }
 
