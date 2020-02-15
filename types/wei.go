@@ -24,6 +24,11 @@ func weiFromDecimal(wei decimal.Decimal) *Wei {
 	return &w
 }
 
+func NewWeiFromString(wei string) *Wei {
+	i, _ := new(big.Int).SetString(wei, 10)
+	return NewWei(i)
+}
+
 func NewWeiFromEther(ether float64) *Wei {
 	d := decimal.NewFromFloat(ether)
 	return weiFromDecimal(d.Mul(baseEther))
